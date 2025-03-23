@@ -15,6 +15,7 @@ public class SchemaRequest {
     public static class Table {
         private String name;
         private List<Field> fields;
+        private List<Relationship> relationships;
     }
 
     @Getter
@@ -23,8 +24,17 @@ public class SchemaRequest {
         private String name;
         private String type;
         private boolean isPrimaryKey;
-        private boolean isForeignKey;
-        private String references;
+        private boolean isAutoIncrement;
+        private boolean isUnique;
+        private boolean isNullable;
+    }
+
+    @Getter
+    @Setter
+    public static class Relationship {
+        private String fieldName;
+        private String referencedTable;
+        private String referencedField;
     }
 }
 
