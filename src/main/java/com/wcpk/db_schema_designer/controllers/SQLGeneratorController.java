@@ -20,7 +20,7 @@ public class SQLGeneratorController {
 
     @PostMapping("/generate-sql")
     public ResponseEntity<String> generateSQL(@RequestBody SchemaRequest schemaRequest) {
-        String sqlScript = sqlGeneratorService.generateSQLScript(schemaRequest);
+        String sqlScript = sqlGeneratorService.generateAndExecuteSQL(schemaRequest);
         return ResponseEntity.ok(sqlScript);
     }
 }
