@@ -6,10 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.io.Console;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -117,6 +114,7 @@ public class SQLGeneratorService {
 
     private String generateFieldSQL(List<SchemaRequest.Field> fields, boolean hasRelationships) {
         StringBuilder fieldSQL = new StringBuilder();
+        List<String> primaryKeys = new ArrayList<>();
 
         for (int i = 0; i < fields.size(); i++) {
             SchemaRequest.Field field = fields.get(i);
@@ -125,11 +123,23 @@ public class SQLGeneratorService {
                     .append(" ")
                     .append(field.getType());
 
-            if (field.isPrimaryKey()) fieldSQL.append(" PRIMARY KEY");
+            if (field.isPrimaryKey()) {
+                primaryKeys.add(field.getName());
+            }
             if (field.isUnique()) fieldSQL.append(" UNIQUE");
             if (!field.isNullable()) fieldSQL.append(" NOT NULL");
 
-            if (i < fields.size() - 1 || hasRelationships) {
+            if (i < fields.size() - 1 || hasRelationships || !primaryKeys.isEmpty()) {
+                fieldSQL.append(",");
+            }
+            fieldSQL.append("\n");
+        }
+
+        if (!primaryKeys.isEmpty()) {
+            fieldSQL.append("    PRIMARY KEY (")
+                    .append(String.join(", ", primaryKeys))
+                    .append(")");
+            if (hasRelationships) {
                 fieldSQL.append(",");
             }
             fieldSQL.append("\n");
