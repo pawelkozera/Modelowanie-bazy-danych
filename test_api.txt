@@ -1,0 +1,99 @@
+Jeden do jeden
+
+{
+  "tables": [
+    {
+      "name": "User2",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "isAutoIncrement": true, "isNullable": false }
+      ],
+      "relationships": []
+    },
+    {
+      "name": "UserProfile",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "isAutoIncrement": true, "isNullable": false },
+        { "name": "user_id", "type": "BIGINT", "isNullable": false }
+      ],
+      "relationships": [
+        {
+          "fieldName": "user_id",
+          "referencedTable": "User2",
+          "referencedField": "id",
+          "manyToMany": false,
+          "oneToOne": true
+        }
+      ]
+    }
+  ]
+}
+
+
+Jeden do wielu
+
+{
+  "tables": [
+    {
+      "name": "authors",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "autoIncrement": true, "unique": false, "nullable": false },
+        { "name": "name", "type": "VARCHAR(255)", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false }
+      ],
+      "relationships": []
+    },
+    {
+      "name": "books",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "autoIncrement": true, "unique": false, "nullable": false },
+        { "name": "title", "type": "VARCHAR(255)", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false },
+        { "name": "author_id", "type": "BIGINT", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false }
+      ],
+      "relationships": [
+        {
+          "fieldName": "author_id",
+          "referencedTable": "authors",
+          "referencedField": "id",
+          "manyToMany": false
+        }
+      ]
+    }
+  ]
+}
+
+
+Wiele do wielu
+
+{
+  "tables": [
+    {
+      "name": "users",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "autoIncrement": true, "unique": false, "nullable": false },
+        { "name": "username", "type": "VARCHAR(255)", "primaryKey": false, "autoIncrement": false, "unique": true, "nullable": false }
+      ],
+      "relationships": [
+        {
+          "fieldName": "user_id",
+          "referencedTable": "posts",
+          "referencedField": "id",
+          "manyToMany": true
+        }
+      ]
+    },
+    {
+      "name": "posts",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "autoIncrement": true, "unique": false, "nullable": false },
+        { "name": "title", "type": "VARCHAR(255)", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false }
+      ],
+      "relationships": [
+        {
+          "fieldName": "post_id",
+          "referencedTable": "users",
+          "referencedField": "id",
+          "manyToMany": true
+        }
+      ]
+    }
+  ]
+}

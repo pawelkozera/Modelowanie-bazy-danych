@@ -17,15 +17,15 @@ public class SQLGeneratorService {
     private final JdbcTemplate jdbcTemplate;
 
     public String generateAndExecuteSQL(SchemaRequest schemaRequest) {
-        Set<String> manyToManyTables = new HashSet<>(); // Track M2M tables
+        Set<String> manyToManyTables = new HashSet<>();
         String sqlScript = generateSQLScript(schemaRequest, manyToManyTables);
 
         try {
             executeSQLScript(sqlScript);
-            dropTables(schemaRequest, manyToManyTables); // Pass M2M tables to drop
+            dropTables(schemaRequest, manyToManyTables);
             return "Skrypt SQL wykonany pomyślnie:\n" + sqlScript;
         } catch (Exception e) {
-            dropTables(schemaRequest, manyToManyTables); // Ensure cleanup on error
+            dropTables(schemaRequest, manyToManyTables);
             return "Błąd podczas wykonywania skryptu:\n" + e.getMessage();
         }
     }
@@ -33,7 +33,18 @@ public class SQLGeneratorService {
     public String generateSQLScript(SchemaRequest schemaRequest, Set<String> manyToManyTables) {
         StringBuilder sqlScript = new StringBuilder();
 
-        // First pass: Create main tables
+        for (SchemaRequest.Table table : schemaRequest.getTables()) {
+            for (SchemaRequest.Relationship relationship : table.getRelationships()) {
+                if (relationship.isOneToOne()) {
+                    for (SchemaRequest.Field field : table.getFields()) {
+                        if (field.getName().equals(relationship.getFieldName())) {
+                            field.setUnique(true);
+                        }
+                    }
+                }
+            }
+        }
+
         for (SchemaRequest.Table table : schemaRequest.getTables()) {
             boolean hasNonManyToManyRelationships = table.getRelationships().stream()
                     .anyMatch(rel -> !rel.isManyToMany());
@@ -44,7 +55,6 @@ public class SQLGeneratorService {
             sqlScript.append(generateEndTableSQL());
         }
 
-        // Second pass: Create M2M tables and track them
         for (SchemaRequest.Table table : schemaRequest.getTables()) {
             for (SchemaRequest.Relationship rel : table.getRelationships()) {
                 if (rel.isManyToMany()) {
@@ -54,10 +64,19 @@ public class SQLGeneratorService {
                     );
 
                     if (!manyToManyTables.contains(intermediateTableName)) {
+                        SchemaRequest.Relationship rel2 = schemaRequest.getTables().stream()
+                                .filter(t -> t.getName().equals(rel.getReferencedTable()))
+                                .flatMap(t -> t.getRelationships().stream())
+                                .filter(r -> r.isManyToMany() && r.getReferencedTable().equals(table.getName()))
+                                .findFirst()
+                                .orElseThrow(() -> new RuntimeException("Brak drugiej relacji many-to-many"));
+
                         sqlScript.append(generateManyToManyTableSQL(
                                 intermediateTableName,
                                 table.getName(),
-                                rel.getReferencedTable()
+                                rel.getReferencedTable(),
+                                rel,
+                                rel2
                         ));
                         manyToManyTables.add(intermediateTableName);
                     }
@@ -146,18 +165,26 @@ public class SQLGeneratorService {
         return relationshipSQL.toString();
     }
 
-    private String generateManyToManyTableSQL(String tableName, String tableA, String tableB) {
+    private String generateManyToManyTableSQL(String tableName,
+                                              String tableA,
+                                              String tableB,
+                                              SchemaRequest.Relationship relA,
+                                              SchemaRequest.Relationship relB) {
         String[] tables = {tableA, tableB};
         Arrays.sort(tables, String.CASE_INSENSITIVE_ORDER);
+
         String sortedTableA = tables[0];
         String sortedTableB = tables[1];
 
+        String fieldA = sortedTableA.equals(tableA) ? relA.getReferencedField() : relB.getReferencedField();
+        String fieldB = sortedTableB.equals(tableB) ? relB.getReferencedField() : relA.getReferencedField();
+
         return "CREATE TABLE " + tableName + " (\n" +
-                "    " + sortedTableA + "_id BIGINT NOT NULL,\n" +
-                "    " + sortedTableB + "_id BIGINT NOT NULL,\n" +
-                "    PRIMARY KEY (" + sortedTableA + "_id, " + sortedTableB + "_id),\n" +
-                "    FOREIGN KEY (" + sortedTableA + "_id) REFERENCES " + sortedTableA + "(id),\n" +
-                "    FOREIGN KEY (" + sortedTableB + "_id) REFERENCES " + sortedTableB + "(id)\n" +
+                "    " + sortedTableA + "_" + fieldA + " BIGINT NOT NULL,\n" +
+                "    " + sortedTableB + "_" + fieldB + " BIGINT NOT NULL,\n" +
+                "    PRIMARY KEY (" + sortedTableA + "_" + fieldA + ", " + sortedTableB + "_" + fieldB + "),\n" +
+                "    FOREIGN KEY (" + sortedTableA + "_" + fieldA + ") REFERENCES " + sortedTableA + "(" + fieldA + "),\n" +
+                "    FOREIGN KEY (" + sortedTableB + "_" + fieldB + ") REFERENCES " + sortedTableB + "(" + fieldB + ")\n" +
                 ");\n\n";
     }
 
@@ -171,4 +198,3 @@ public class SQLGeneratorService {
         return ");\n\n";
     }
 }
-

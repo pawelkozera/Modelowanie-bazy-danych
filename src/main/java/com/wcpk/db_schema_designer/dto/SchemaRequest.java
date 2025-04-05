@@ -36,6 +36,7 @@ public class SchemaRequest {
         private String referencedTable;
         private String referencedField;
         private boolean manyToMany;
+        private boolean oneToOne;
     }
 }
 
