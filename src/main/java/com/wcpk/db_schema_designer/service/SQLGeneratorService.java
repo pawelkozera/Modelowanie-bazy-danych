@@ -13,21 +13,42 @@ import java.util.*;
 public class SQLGeneratorService {
     private final JdbcTemplate jdbcTemplate;
 
-    public String generateAndExecuteSQL(SchemaRequest schemaRequest) {
-        Set<String> manyToManyTables = new HashSet<>();
-        String sqlScript = generateSQLScript(schemaRequest, manyToManyTables);
+    private static final Set<String> RESERVED_KEYWORDS = Set.of(
+            "select", "insert", "delete", "update", "from", "where", "user", "group", "table", "order", "by", "limit", "drop"
+    );
 
+    public String generateAndExecuteSQL(SchemaRequest schemaRequest) {
         try {
+            validateSchemaRequest(schemaRequest);
+
+            Set<String> manyToManyTables = new HashSet<>();
+            String sqlScript = generateSQLScript(schemaRequest, manyToManyTables);
             executeSQLScript(sqlScript);
             dropTables(schemaRequest, manyToManyTables);
             return "Skrypt SQL wykonany pomyślnie:\n" + sqlScript;
         } catch (Exception e) {
-            dropTables(schemaRequest, manyToManyTables);
+            dropTables(schemaRequest, new HashSet<>());
             return "Błąd podczas wykonywania skryptu:\n" + e.getMessage();
         }
     }
 
-    public String generateSQLScript(SchemaRequest schemaRequest, Set<String> manyToManyTables) {
+    private void validateSchemaRequest(SchemaRequest schemaRequest) {
+        for (SchemaRequest.Table table : schemaRequest.getTables()) {
+            String tableName = table.getName().toLowerCase();
+            if (RESERVED_KEYWORDS.contains(tableName)) {
+                throw new IllegalArgumentException("Table name '" + tableName + "' is a reserved keyword.");
+            }
+
+            for (SchemaRequest.Field field : table.getFields()) {
+                String fieldName = field.getName().toLowerCase();
+                if (RESERVED_KEYWORDS.contains(fieldName)) {
+                    throw new IllegalArgumentException("Field name '" + fieldName + "' is a reserved keyword.");
+                }
+            }
+        }
+    }
+
+    private String generateSQLScript(SchemaRequest schemaRequest, Set<String> manyToManyTables) {
         StringBuilder sqlScript = new StringBuilder();
 
         for (SchemaRequest.Table table : schemaRequest.getTables()) {
