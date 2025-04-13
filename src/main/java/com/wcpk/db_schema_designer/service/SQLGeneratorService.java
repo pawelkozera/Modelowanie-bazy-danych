@@ -68,8 +68,8 @@ public class SQLGeneratorService {
                     .anyMatch(rel -> !rel.isManyToMany());
 
             sqlScript.append(generateCreateTableSQL(table.getName()));
-            sqlScript.append(generateFieldSQL(table.getFields(), hasNonManyToManyRelationships));
-            sqlScript.append(generateRelationshipSQL(table.getRelationships()));
+            sqlScript.append(generateFieldSQL(table.getFields(), table.getRelationships()));
+            //sqlScript.append(generateRelationshipSQL(table.getRelationships()));
             sqlScript.append(generateEndTableSQL());
         }
 
@@ -100,6 +100,10 @@ public class SQLGeneratorService {
                     }
                 }
             }
+        }
+
+        for (String alterSQL : generateAlterTableRelationships(schemaRequest)) {
+            sqlScript.append(alterSQL).append("\n");
         }
 
         return sqlScript.toString();
@@ -133,10 +137,10 @@ public class SQLGeneratorService {
                 " (\n";
     }
 
-    private String generateFieldSQL(List<SchemaRequest.Field> fields, boolean hasRelationships) {
+    private String generateFieldSQL(List<SchemaRequest.Field> fields, List<SchemaRequest.Relationship> relationships) {
         StringBuilder fieldSQL = new StringBuilder();
+        List<String> lines = new ArrayList<>();
         List<String> primaryKeys = new ArrayList<>();
-        List<String> fieldLines = new ArrayList<>();
 
         for (SchemaRequest.Field field : fields) {
             StringBuilder line = new StringBuilder();
@@ -148,7 +152,7 @@ public class SQLGeneratorService {
             if (field.isUnique()) line.append(" UNIQUE");
             if (!field.isNullable()) line.append(" NOT NULL");
 
-            fieldLines.add(line.toString());
+            lines.add(line.toString());
 
             if (field.isPrimaryKey()) {
                 primaryKeys.add(field.getName());
@@ -156,17 +160,36 @@ public class SQLGeneratorService {
         }
 
         if (!primaryKeys.isEmpty()) {
-            fieldLines.add("    PRIMARY KEY (" + String.join(", ", primaryKeys) + ")");
+            lines.add("    PRIMARY KEY (" + String.join(", ", primaryKeys) + ")");
         }
 
-        fieldSQL.append(String.join(",\n", fieldLines));
-        if (hasRelationships) {
-            fieldSQL.append(",\n");
-        } else {
-            fieldSQL.append("\n");
+        /*
+        for (SchemaRequest.Relationship relationship : relationships) {
+            if (!relationship.isManyToMany()) {
+                lines.add("    FOREIGN KEY (" + relationship.getFieldName() + ") REFERENCES " +
+                        relationship.getReferencedTable() + "(" + relationship.getReferencedField() + ")");
+            }
         }
+         */
 
+        fieldSQL.append(String.join(",\n", lines)).append("\n");
         return fieldSQL.toString();
+    }
+
+    private List<String> generateAlterTableRelationships(SchemaRequest schemaRequest) {
+        List<String> alterStatements = new ArrayList<>();
+
+        for (SchemaRequest.Table table : schemaRequest.getTables()) {
+            for (SchemaRequest.Relationship relationship : table.getRelationships()) {
+                if (relationship.isManyToMany()) continue;
+
+                alterStatements.add("ALTER TABLE " + table.getName() +
+                        " ADD FOREIGN KEY (" + relationship.getFieldName() + ") REFERENCES " +
+                        relationship.getReferencedTable() + "(" + relationship.getReferencedField() + ");");
+            }
+        }
+
+        return alterStatements;
     }
 
     private String generateRelationshipSQL(List<SchemaRequest.Relationship> relationships) {
