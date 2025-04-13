@@ -97,3 +97,55 @@ Wiele do wielu
     }
   ]
 }
+
+Wiele połączeń
+
+{
+  "tables": [
+    {
+      "name": "authors",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "autoIncrement": true, "unique": false, "nullable": false },
+        { "name": "name", "type": "VARCHAR(255)", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false }
+      ],
+      "relationships": []
+    },
+    {
+      "name": "books",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "autoIncrement": true, "unique": false, "nullable": false },
+        { "name": "title", "type": "VARCHAR(255)", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false },
+        { "name": "author_id", "type": "BIGINT", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false }
+      ],
+      "relationships": [
+        {
+          "fieldName": "author_id",
+          "referencedTable": "authors",
+          "referencedField": "id",
+          "manyToMany": false
+        },
+        {
+          "fieldName": "books_id",
+          "referencedTable": "posts",
+          "referencedField": "id",
+          "manyToMany": true
+        }
+      ]
+    },
+    {
+      "name": "posts",
+      "fields": [
+        { "name": "id", "type": "BIGINT", "primaryKey": true, "autoIncrement": true, "unique": false, "nullable": false },
+        { "name": "title", "type": "VARCHAR(255)", "primaryKey": false, "autoIncrement": false, "unique": false, "nullable": false }
+      ],
+      "relationships": [
+        {
+          "fieldName": "post_id",
+          "referencedTable": "books",
+          "referencedField": "id",
+          "manyToMany": true
+        }
+      ]
+    }
+  ]
+}

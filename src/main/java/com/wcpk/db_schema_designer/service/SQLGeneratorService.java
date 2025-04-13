@@ -136,33 +136,33 @@ public class SQLGeneratorService {
     private String generateFieldSQL(List<SchemaRequest.Field> fields, boolean hasRelationships) {
         StringBuilder fieldSQL = new StringBuilder();
         List<String> primaryKeys = new ArrayList<>();
+        List<String> fieldLines = new ArrayList<>();
 
-        for (int i = 0; i < fields.size(); i++) {
-            SchemaRequest.Field field = fields.get(i);
-            fieldSQL.append("    ")
+        for (SchemaRequest.Field field : fields) {
+            StringBuilder line = new StringBuilder();
+            line.append("    ")
                     .append(field.getName())
                     .append(" ")
                     .append(field.getType());
 
+            if (field.isUnique()) line.append(" UNIQUE");
+            if (!field.isNullable()) line.append(" NOT NULL");
+
+            fieldLines.add(line.toString());
+
             if (field.isPrimaryKey()) {
                 primaryKeys.add(field.getName());
             }
-            if (field.isUnique()) fieldSQL.append(" UNIQUE");
-            if (!field.isNullable()) fieldSQL.append(" NOT NULL");
-
-            if (i < fields.size() - 1 || hasRelationships || !primaryKeys.isEmpty()) {
-                fieldSQL.append(",");
-            }
-            fieldSQL.append("\n");
         }
 
         if (!primaryKeys.isEmpty()) {
-            fieldSQL.append("    PRIMARY KEY (")
-                    .append(String.join(", ", primaryKeys))
-                    .append(")");
-            if (hasRelationships) {
-                fieldSQL.append(",");
-            }
+            fieldLines.add("    PRIMARY KEY (" + String.join(", ", primaryKeys) + ")");
+        }
+
+        fieldSQL.append(String.join(",\n", fieldLines));
+        if (hasRelationships) {
+            fieldSQL.append(",\n");
+        } else {
             fieldSQL.append("\n");
         }
 
@@ -170,30 +170,16 @@ public class SQLGeneratorService {
     }
 
     private String generateRelationshipSQL(List<SchemaRequest.Relationship> relationships) {
-        StringBuilder relationshipSQL = new StringBuilder();
+        List<String> lines = new ArrayList<>();
 
-        for (int j = 0; j < relationships.size(); j++) {
-            SchemaRequest.Relationship relationship = relationships.get(j);
+        for (SchemaRequest.Relationship relationship : relationships) {
+            if (relationship.isManyToMany()) continue;
 
-            if (relationship.isManyToMany()) {
-                continue;
-            }
-
-            relationshipSQL.append("    FOREIGN KEY (")
-                    .append(relationship.getFieldName())
-                    .append(") REFERENCES ")
-                    .append(relationship.getReferencedTable())
-                    .append("(")
-                    .append(relationship.getReferencedField())
-                    .append(")");
-
-            if (j < relationships.size() - 1) {
-                relationshipSQL.append(",");
-            }
-            relationshipSQL.append("\n");
+            lines.add("    FOREIGN KEY (" + relationship.getFieldName() + ") REFERENCES " +
+                    relationship.getReferencedTable() + "(" + relationship.getReferencedField() + ")");
         }
 
-        return relationshipSQL.toString();
+        return String.join(",\n", lines) + (lines.isEmpty() ? "" : "\n");
     }
 
     private String generateManyToManyTableSQL(String tableName,
