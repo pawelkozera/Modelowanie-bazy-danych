@@ -25,7 +25,7 @@ public class SQLGeneratorService {
             String sqlScript = generateSQLScript(schemaRequest, manyToManyTables);
             executeSQLScript(sqlScript);
             dropTables(schemaRequest, manyToManyTables);
-            return "Skrypt SQL wykonany pomyślnie:\n" + sqlScript;
+            return sqlScript;
         } catch (Exception e) {
             dropTables(schemaRequest, new HashSet<>());
             return "Błąd podczas wykonywania skryptu:\n" + e.getMessage();
